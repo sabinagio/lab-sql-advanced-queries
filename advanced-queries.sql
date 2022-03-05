@@ -10,17 +10,25 @@ FROM
         JOIN
     film ON first.film_id = film.film_id;
 
-# 2. For each film, list actor that has acted in more films. 
-SELECT film_actor_count.film_id, film_actor_count.actor_id, first_name, last_name FROM
+# 2. For each film, list actor that has acted in the most films. 
+SELECT 
+	film_id, first_name, last_name
+FROM 
+	actor
+JOIN
 (SELECT 
-	film_id, actor_id, COUNT(film_id) OVER (PARTITION BY actor_id) AS number_of_films
+	film_id, actor_id 
 FROM
-	film_actor
-GROUP BY
-	film_id, actor_id
-ORDER BY
-	film_id ASC) AS film_actor_count
-JOIN actor
-ON actor.actor_id = film_actor_count.actor_id
+	(SELECT 
+		film_id, actor_id, RANK() OVER (PARTITION BY film_id ORDER BY number_of_films DESC) AS actor_ranking
+	FROM    
+		(SELECT 
+			film_id, actor_id, COUNT(*) OVER (PARTITION BY actor_id) AS number_of_films
+		FROM
+			film_actor) 
+		AS film_actors) 
+	AS film_rankings
 WHERE 
-	number_of_films > 1;
+	actor_ranking = 1)
+AS selected_actors
+ON selected_actors.actor_id = actor.actor_id;
